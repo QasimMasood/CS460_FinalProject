@@ -1,0 +1,15 @@
+{
+  "name": "cs460_finalproject",
+  "version": "1.0.0",
+  "description": "Solar System Project",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.171.0"
+  }
+}
