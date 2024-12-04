@@ -1,4 +1,5 @@
 import * as THREE from './node_modules/three/build/three.module.js';
+import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -193,10 +194,23 @@ function smoothCameraTransition(targetPosition) {
 
     if (t < 1) {
       requestAnimationFrame(update);
+    } else {
+      enableOrbitControls(targetPosition);
     }
   }
 
   update();
+}
+
+// Enable OrbitControls to allow dragging around the planet
+let controls;
+function enableOrbitControls(targetPosition) {
+  if (controls) {
+    controls.dispose();
+  }
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.copy(targetPosition);
+  controls.update();
 }
 
 // Animation loop
@@ -220,3 +234,4 @@ function animate() {
 }
 
 animate();
+
