@@ -153,6 +153,52 @@ slider.addEventListener('input', () => {
   });
 });
 
+// Raycaster for detecting clicks on planets
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+// Add event listener for mouse click
+window.addEventListener('click', (event) => {
+  // Calculate mouse position in normalized device coordinates (-1 to +1)
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Update the raycaster with the camera and mouse position
+  raycaster.setFromCamera(mouse, camera);
+
+  // Calculate objects intersected by the raycaster
+  const intersects = raycaster.intersectObjects(planetMeshes);
+
+  if (intersects.length > 0) {
+    const targetPlanet = intersects[0].object;
+    smoothCameraTransition(targetPlanet.position);
+  }
+});
+
+// Function to smoothly transition the camera to a target position
+function smoothCameraTransition(targetPosition) {
+  const startPosition = new THREE.Vector3().copy(camera.position);
+  const endPosition = new THREE.Vector3().copy(targetPosition).add(new THREE.Vector3(0, 50, 100)); // Offset to view the planet
+
+  const duration = 2000; // Duration of the transition in milliseconds
+  const startTime = performance.now();
+
+  function update() {
+    const elapsed = performance.now() - startTime;
+    const t = Math.min(elapsed / duration, 1);
+
+    // Interpolate between the start and end positions
+    camera.position.lerpVectors(startPosition, endPosition, t);
+    camera.lookAt(targetPosition);
+
+    if (t < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  update();
+}
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
