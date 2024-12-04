@@ -4,12 +4,18 @@
   "description": "Solar System Project",
   "main": "app.js",
   "scripts": {
+    "start": "lite-server .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "three": "^0.171.0"
+    "http-server": "^14.1.1",
+    "three": "^0.171.0",
+    "tweakpane": "^4.0.5"
+  },
+  "devDependencies": {
+    "lite-server": "^2.6.1"
   }
 }
