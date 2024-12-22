@@ -1,237 +1,506 @@
+// Solar System Final Project - Enhanced
+// CS Graphics Project by Student A & Student B
+// We improved the camera arc transition to smoothly end near each planet
+// (while filling the screen appropriately for the planet's size).
+// We also added more colorful lighting/textures to liven up the scene.
+
 import * as THREE from './node_modules/three/build/three.module.js';
 import { OrbitControls } from './node_modules/three/examples/jsm/controls/OrbitControls.js';
 
-// Scene setup
+// These are post-processing classes for bloom/glow effects
+import { EffectComposer } from './node_modules/three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './node_modules/three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from './node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+// Scene setup with perspective camera and WebGL renderer
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-const renderer = new THREE.WebGLRenderer({ alpha: true }); // Enable transparency
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 20000);
+camera.position.set(1400, 800, 1400);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.getElementById('container').appendChild(renderer.domElement);
 
-// Append the WebGL canvas to the #container div
-const container = document.getElementById('container');
-container.appendChild(renderer.domElement);
+// Basic lighting, plus some colored lights for more "spacey" vibes
+// AmbientLight for a subtle overall illumination
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambientLight);
 
-// Load textures
-const textureLoader = new THREE.TextureLoader();
+// A slight purple directional light for cosmic atmosphere
+const purpleLight = new THREE.DirectionalLight(0xcc99ff, 0.3);
+purpleLight.position.set(-500, 300, 400);
+scene.add(purpleLight);
 
-const sunTexture = textureLoader.load('./sun_texture.jpeg');
-const mercuryTexture = textureLoader.load('./mercury.webp');
-const venusTexture = textureLoader.load('./venus.jpeg');
-const earthTexture = textureLoader.load('./earth.jpeg');
-const marsTexture = textureLoader.load('./mars.webp');
-const jupiterTexture = textureLoader.load('./jupiter.jpeg');
-const saturnTexture = textureLoader.load('./saturn.jpeg');
-const uranusTexture = textureLoader.load('./uranus.webp');
-const neptuneTexture = textureLoader.load('./neptune.jpeg');
+// A bluish point light to add color from another angle
+const bluePointLight = new THREE.PointLight(0x66ccff, 0.6, 3000);
+bluePointLight.position.set(1000, 500, -600);
+scene.add(bluePointLight);
 
-// Add the Sun
-const sunGeometry = new THREE.SphereGeometry(100, 32, 32); // Sun diameter scaled to 100 units
-const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
+// The main “Sunlight” near the origin
+const sunPointLight = new THREE.PointLight(0xffffff, 2, 0);
+sunPointLight.position.set(0, 0, 0);
+scene.add(sunPointLight);
+
+// Directional light that casts shadows
+const mainDirectionalLight = new THREE.DirectionalLight(0xffffff, 1);
+mainDirectionalLight.position.set(200, 500, 300);
+mainDirectionalLight.castShadow = true;
+scene.add(mainDirectionalLight);
+
+// Starry background using a huge sphere
+const starTexture = new THREE.TextureLoader().load('./stars_background.jpg');
+const starGeometry = new THREE.SphereGeometry(5000, 64, 64);
+const starMaterial = new THREE.MeshBasicMaterial({
+  map: starTexture,
+  side: THREE.BackSide,
+});
+const starField = new THREE.Mesh(starGeometry, starMaterial);
+scene.add(starField);
+
+// A swirling colorful galaxy overlay for extra color
+const galaxyTexture = new THREE.TextureLoader().load('./galaxy_swirl.png');
+const galaxyGeometry = new THREE.SphereGeometry(4900, 64, 64);
+const galaxyMaterial = new THREE.MeshBasicMaterial({
+  map: galaxyTexture,
+  side: THREE.BackSide,
+  transparent: true,
+  opacity: 0.4, // made it a bit brighter
+});
+const galaxySwirl = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+scene.add(galaxySwirl);
+
+// Nebula-like particle field for depth
+const particleCount = 3000;
+const positions = [];
+for (let i = 0; i < particleCount; i++) {
+  positions.push(THREE.MathUtils.randFloatSpread(6000));
+  positions.push(THREE.MathUtils.randFloatSpread(6000));
+  positions.push(THREE.MathUtils.randFloatSpread(6000));
+}
+const particleGeometry = new THREE.BufferGeometry();
+particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+const particleMaterial = new THREE.PointsMaterial({
+  color: 0xffffff,
+  size: 3, // slightly bigger
+  transparent: true,
+  opacity: 0.75,
+});
+const nebulaParticles = new THREE.Points(particleGeometry, particleMaterial);
+scene.add(nebulaParticles);
+
+// Twinkling stars for a cosmic sparkle
+const twinkleCount = 800;
+const twinklePositions = new Float32Array(twinkleCount * 3);
+const twinklePhases = new Float32Array(twinkleCount);
+for (let i = 0; i < twinkleCount; i++) {
+  twinklePositions[i * 3 + 0] = THREE.MathUtils.randFloatSpread(6000);
+  twinklePositions[i * 3 + 1] = THREE.MathUtils.randFloatSpread(6000);
+  twinklePositions[i * 3 + 2] = THREE.MathUtils.randFloatSpread(6000);
+  twinklePhases[i] = Math.random() * Math.PI * 2;
+}
+const twinkleGeometry = new THREE.BufferGeometry();
+twinkleGeometry.setAttribute('position', new THREE.BufferAttribute(twinklePositions, 3));
+const twinkleMaterial = new THREE.PointsMaterial({
+  color: 0xfffacd,
+  size: 1.5,
+  transparent: true,
+  opacity: 1.0,
+});
+const twinkleStars = new THREE.Points(twinkleGeometry, twinkleMaterial);
+scene.add(twinkleStars);
+
+// Shooting stars that appear randomly
+let shootingStars = [];
+function createShootingStar() {
+  const shootGeo = new THREE.SphereGeometry(2, 8, 8);
+  const shootMat = new THREE.MeshBasicMaterial({ color: 0xffddcc });
+  const shootingStarMesh = new THREE.Mesh(shootGeo, shootMat);
+  shootingStarMesh.position.set(
+    THREE.MathUtils.randFloatSpread(3000),
+    1200 + Math.random() * 600,
+    THREE.MathUtils.randFloatSpread(3000)
+  );
+  const velocity = new THREE.Vector3(
+    (Math.random() - 0.5) * 0.2,
+    -0.5 - Math.random() * 0.5,
+    (Math.random() - 0.5) * 0.2
+  );
+  scene.add(shootingStarMesh);
+  shootingStars.push({ mesh: shootingStarMesh, velocity });
+}
+
+// Creating the sun with emissive material and a glow sprite
+const sunTexture = new THREE.TextureLoader().load('./sun_texture.jpeg');
+const sunGeometry = new THREE.SphereGeometry(120, 64, 64);
+const sunMaterial = new THREE.MeshStandardMaterial({
+  map: sunTexture,
+  emissive: 0xffd700,
+  emissiveIntensity: 1.0,
+});
 const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+sun.castShadow = false;
+sun.userData.name = 'Sun';
 scene.add(sun);
 
-// Set initial camera position for bird's-eye view
-camera.position.set(0, 1200, 0); // Set camera above the solar system to ensure visibility
-camera.lookAt(0, 0, 0);
-let isBirdsEyeView = true; // Start in bird's-eye view
+const sunGlowTexture = new THREE.TextureLoader().load('./glow_texture.png');
+const sunGlowMaterial = new THREE.SpriteMaterial({
+  map: sunGlowTexture,
+  blending: THREE.AdditiveBlending,
+  color: 0xffaa33,
+  opacity: 0.6,
+});
+const sunGlow = new THREE.Sprite(sunGlowMaterial);
+sunGlow.scale.set(600, 600, 1);
+scene.add(sunGlow);
 
-// Add planets with realistic scaled sizes, distances, orbit speeds, and rotation speeds
-let speedScalingFactor = 1; // Initial speed multiplier
-
-const planets = [
-  { name: 'Mercury', texture: mercuryTexture, size: 1.7, distance: 120, baseOrbitSpeed: 0.0019, rotationSpeed: 0.0007 },
-  { name: 'Venus', texture: venusTexture, size: 4.3, distance: 160, baseOrbitSpeed: 0.0012, rotationSpeed: -0.00004 },
-  { name: 'Earth', texture: earthTexture, size: 4.6, distance: 200, baseOrbitSpeed: 0.001, rotationSpeed: 0.0417 },
-  { name: 'Mars', texture: marsTexture, size: 2.4, distance: 260, baseOrbitSpeed: 0.0008, rotationSpeed: 0.0409 },
-  { name: 'Jupiter', texture: jupiterTexture, size: 50, distance: 400, baseOrbitSpeed: 0.0004, rotationSpeed: 0.4100 },
-  { name: 'Saturn', texture: saturnTexture, size: 42, distance: 500, baseOrbitSpeed: 0.0003, rotationSpeed: 0.444 },
-  { name: 'Uranus', texture: uranusTexture, size: 17, distance: 700, baseOrbitSpeed: 0.0002, rotationSpeed: -0.718 },
-  { name: 'Neptune', texture: neptuneTexture, size: 16.5, distance: 900, baseOrbitSpeed: 0.0001, rotationSpeed: 0.671 },
+// Planet data, including size and orbit speeds
+const planetsData = [
+  { name: 'Mercury', texture: './mercury.webp',  size: 10, distance: 250,  baseOrbitSpeed: 0.01, rotationSpeed: 0.01 },
+  { name: 'Venus',   texture: './venus.jpeg',    size: 16, distance: 350,  baseOrbitSpeed: 0.008, rotationSpeed: 0.005 },
+  { name: 'Earth',   texture: './earth.jpeg',    size: 18, distance: 450,  baseOrbitSpeed: 0.007, rotationSpeed: 0.02 },
+  { name: 'Mars',    texture: './mars.webp',     size: 12, distance: 550,  baseOrbitSpeed: 0.006, rotationSpeed: 0.015 },
+  { name: 'Jupiter', texture: './jupiter.jpeg',  size: 40, distance: 750,  baseOrbitSpeed: 0.004, rotationSpeed: 0.03 },
+  { name: 'Saturn',  texture: './saturn.jpeg',   size: 35, distance: 950,  baseOrbitSpeed: 0.003, rotationSpeed: 0.02, hasRings: true },
+  { name: 'Uranus',  texture: './uranus.webp',   size: 24, distance: 1150, baseOrbitSpeed: 0.002, rotationSpeed: 0.01 },
+  { name: 'Neptune', texture: './neptune.jpeg',  size: 22, distance: 1350, baseOrbitSpeed: 0.001, rotationSpeed: 0.01 },
 ];
 
-// Store planet objects and orbit lines
 const planetMeshes = [];
 const orbitLines = [];
+let speedScalingFactor = 1.0;
 
-// Create planets and add to the scene
-planets.forEach((planet) => {
-  const planetGeometry = new THREE.SphereGeometry(planet.size, 32, 32); // Scaled size
-  const planetMaterial = new THREE.MeshBasicMaterial({ map: planet.texture });
-  const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
-  planetMesh.userData = {
-    angle: Math.random() * Math.PI * 2, // Start at a random angle (0 to 2π)
-    distance: planet.distance,
-    orbitSpeed: planet.baseOrbitSpeed * speedScalingFactor,
-    rotationSpeed: planet.rotationSpeed,
+// Creating each planet and its orbit line
+planetsData.forEach((pd) => {
+  const tex = new THREE.TextureLoader().load(pd.texture);
+  const geo = new THREE.SphereGeometry(pd.size, 64, 64);
+  const mat = new THREE.MeshStandardMaterial({ map: tex });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  mesh.userData = {
+    angle: Math.random() * Math.PI * 2,
+    distance: pd.distance,
+    orbitSpeed: pd.baseOrbitSpeed * speedScalingFactor,
+    rotationSpeed: pd.rotationSpeed,
+    isFocused: false,
+    name: pd.name,
+    planetSize: pd.size // store planet size for camera offset
   };
-  planetMesh.position.x = planet.distance * Math.cos(planetMesh.userData.angle); // Set initial position
-  planetMesh.position.z = planet.distance * Math.sin(planetMesh.userData.angle); // Set initial position
-  scene.add(planetMesh);
-  planetMeshes.push(planetMesh);
 
-  // Create orbit lines
-  const orbitPoints = [];
-  for (let i = 0; i <= 64; i++) {
-    const theta = (i / 64) * Math.PI * 2;
-    orbitPoints.push(new THREE.Vector3(planet.distance * Math.cos(theta), 0, planet.distance * Math.sin(theta)));
+  mesh.position.set(
+    pd.distance * Math.cos(mesh.userData.angle),
+    0,
+    pd.distance * Math.sin(mesh.userData.angle)
+  );
+
+  scene.add(mesh);
+  planetMeshes.push(mesh);
+
+  if (pd.hasRings) {
+    const ringGeo = new THREE.RingGeometry(pd.size + 10, pd.size + 20, 64);
+    ringGeo.rotateX(Math.PI / 2);
+    const ringTex = new THREE.TextureLoader().load('./saturn_ring.png');
+    const ringMat = new THREE.MeshStandardMaterial({
+      map: ringTex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.castShadow = true;
+    ringMesh.receiveShadow = true;
+    mesh.add(ringMesh);
   }
-  const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-  const orbitMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-  const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
-  orbitLine.visible = false; // Start with orbit lines hidden
+
+  const orbitCurve = new THREE.EllipseCurve(0, 0, pd.distance, pd.distance);
+  const orbitPts = orbitCurve.getPoints(128);
+  const orbitGeo = new THREE.BufferGeometry().setFromPoints(orbitPts);
+  const orbitMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+  const orbitLine = new THREE.Line(orbitGeo, orbitMat);
+  orbitLine.rotation.x = Math.PI / 2;
+  orbitLine.visible = false;
   scene.add(orbitLine);
   orbitLines.push(orbitLine);
 });
 
-// Add a button to switch views
-const button = document.createElement('button');
-button.textContent = 'Switch View';
-button.style.position = 'absolute';
-button.style.top = '10px';
-button.style.left = '10px';
-document.body.appendChild(button);
+// OrbitControls let us drag the scene around with the mouse
+let controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+function enableOrbitControls(target) {
+  if (controls) controls.dispose();
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.copy(target);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.update();
+}
 
-// Add event listener for the button
-button.addEventListener('click', () => {
-  if (isBirdsEyeView) {
-    // Normal view
-    camera.position.set(0, 0, 200); // Reset to normal view
-    camera.lookAt(0, 0, 0);
-    isBirdsEyeView = false;
-  } else {
-    // Bird's-eye view
-    camera.position.set(0, 1200, 0); // Move camera above the solar system
-    camera.lookAt(0, 0, 0); // Point camera to the origin
+// Post-processing for bloom effect
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.8,
+  0.4,
+  0.85
+);
+composer.addPass(bloomPass);
+
+// Switch View button to toggle between bird's-eye and angled
+let isBirdsEyeView = false;
+const switchViewBtn = document.createElement('button');
+switchViewBtn.textContent = 'Switch View';
+switchViewBtn.style.position = 'absolute';
+switchViewBtn.style.top = '10px';
+switchViewBtn.style.left = '10px';
+document.body.appendChild(switchViewBtn);
+
+switchViewBtn.addEventListener('click', () => {
+  if (!isBirdsEyeView) {
+    cameraFlyTo(new THREE.Vector3(0, 2000, 0), 2000);
     isBirdsEyeView = true;
+  } else {
+    cameraFlyTo(new THREE.Vector3(1400, 800, 1400), 1200);
+    isBirdsEyeView = false;
   }
 });
 
-// Add a button to toggle orbit lines
-const orbitButton = document.createElement('button');
-orbitButton.textContent = 'Toggle Orbits';
-orbitButton.style.position = 'absolute';
-orbitButton.style.top = '50px'; // Positioned below the switch view button
-orbitButton.style.left = '10px';
-document.body.appendChild(orbitButton);
+// Toggle Orbits button to show/hide orbit lines
+const toggleOrbitsBtn = document.createElement('button');
+toggleOrbitsBtn.textContent = 'Toggle Orbits';
+toggleOrbitsBtn.style.position = 'absolute';
+toggleOrbitsBtn.style.top = '50px';
+toggleOrbitsBtn.style.left = '10px';
+document.body.appendChild(toggleOrbitsBtn);
 
-// Add event listener for the orbit button
-orbitButton.addEventListener('click', () => {
-  orbitLines.forEach((orbit) => {
-    orbit.visible = !orbit.visible; // Toggle visibility
+toggleOrbitsBtn.addEventListener('click', () => {
+  orbitLines.forEach((line) => {
+    line.visible = !line.visible;
   });
 });
 
-// Add a slider below the "Toggle Orbits" button
+// Orbit Speed slider to change how fast planets move
 const sliderContainer = document.createElement('div');
 sliderContainer.style.position = 'absolute';
-sliderContainer.style.top = '90px'; // Positioned below the orbit button
+sliderContainer.style.top = '90px';
 sliderContainer.style.left = '10px';
-sliderContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+sliderContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
 sliderContainer.style.color = 'white';
 sliderContainer.style.padding = '10px';
 sliderContainer.style.borderRadius = '5px';
 document.body.appendChild(sliderContainer);
 
 const sliderLabel = document.createElement('label');
-sliderLabel.textContent = 'Orbit Speed:';
+sliderLabel.textContent = 'Orbit Speed: ';
 sliderLabel.style.marginRight = '10px';
 sliderContainer.appendChild(sliderLabel);
 
-const slider = document.createElement('input');
-slider.type = 'range';
-slider.min = '0.1';
-slider.max = '5';
-slider.step = '0.1';
-slider.value = speedScalingFactor.toString();
-slider.style.width = '150px';
-sliderContainer.appendChild(slider);
+const speedSlider = document.createElement('input');
+speedSlider.type = 'range';
+speedSlider.min = '0.1';
+speedSlider.max = '5';
+speedSlider.step = '0.1';
+speedSlider.value = '1';
+speedSlider.style.width = '150px';
+sliderContainer.appendChild(speedSlider);
 
-// Event listener for slider to adjust speed scaling factor dynamically
-slider.addEventListener('input', () => {
-  speedScalingFactor = parseFloat(slider.value);
-  planetMeshes.forEach((planet, index) => {
-    planet.userData.orbitSpeed = planets[index].baseOrbitSpeed * speedScalingFactor;
+speedSlider.addEventListener('input', () => {
+  speedScalingFactor = parseFloat(speedSlider.value);
+  planetMeshes.forEach((m, i) => {
+    m.userData.orbitSpeed = planetsData[i].baseOrbitSpeed * speedScalingFactor;
   });
 });
 
-// Raycaster for detecting clicks on planets
+// Back button to unlock from any focused planet
+const backButton = document.createElement('button');
+backButton.textContent = 'Back';
+backButton.style.position = 'absolute';
+backButton.style.top = '130px';
+backButton.style.left = '10px';
+document.body.appendChild(backButton);
+
+backButton.addEventListener('click', () => {
+  planetMeshes.forEach((m) => (m.userData.isFocused = false));
+  cameraFlyTo(new THREE.Vector3(0, 2000, 0), 1500);
+  isBirdsEyeView = true;
+});
+
+// Raycasting for clicks on planets
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-
-// Add event listener for mouse click
 window.addEventListener('click', (event) => {
-  // Calculate mouse position in normalized device coordinates (-1 to +1)
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  // Update the raycaster with the camera and mouse position
   raycaster.setFromCamera(mouse, camera);
-
-  // Calculate objects intersected by the raycaster
   const intersects = raycaster.intersectObjects(planetMeshes);
 
   if (intersects.length > 0) {
+    // focus on the clicked planet
     const targetPlanet = intersects[0].object;
-    smoothCameraTransition(targetPlanet.position);
+    planetMeshes.forEach((m) => (m.userData.isFocused = false));
+    targetPlanet.userData.isFocused = true;
+
+    // we'll do the arc transition, but also factor in planet size
+    const planetSize = targetPlanet.userData.planetSize || 10;
+    // multiply the offset so bigger planets fill the screen better
+    const finalOffset = new THREE.Vector3(0, planetSize * 5, planetSize * 8);
+    arcCameraTransition(camera.position.clone(), targetPlanet.position.clone().add(finalOffset), targetPlanet.position);
   }
 });
 
-// Function to smoothly transition the camera to a target position
-function smoothCameraTransition(targetPosition) {
-  const startPosition = new THREE.Vector3().copy(camera.position);
-  const endPosition = new THREE.Vector3().copy(targetPosition).add(new THREE.Vector3(0, 50, 100)); // Offset to view the planet
+// Arc-based camera movement with a smoother finish
+function arcCameraTransition(startPos, endPos, lookTarget) {
+  const duration = 2500; // extended duration for smoother motion
+  const arcHeight = 700; // a bit bigger arc
+  const startTime = performance.now();
 
-  const duration = 2000; // Duration of the transition in milliseconds
+  // midpoint above the start & end
+  const midPos = new THREE.Vector3(
+    (startPos.x + endPos.x) / 2,
+    Math.max(startPos.y, endPos.y) + arcHeight,
+    (startPos.z + endPos.z) / 2
+  );
+
+  function updateArc() {
+    const now = performance.now();
+    const elapsed = now - startTime;
+    let t = elapsed / duration;
+    if (t > 1) t = 1;
+    
+    // Using a Quadratic Bezier approach
+    const oneMinusT = 1 - t;
+    const cameraPos = new THREE.Vector3()
+      .addScaledVector(startPos, oneMinusT * oneMinusT)
+      .addScaledVector(midPos, 2 * oneMinusT * t)
+      .addScaledVector(endPos, t * t);
+
+    camera.position.copy(cameraPos);
+
+    // For an even smoother finish, let's ease the lookAt during the final portion
+    // We'll interpolate the lookAt position as well
+    const lookInterp = new THREE.Vector3().copy(lookTarget).multiplyScalar(t).addScaledVector(new THREE.Vector3(0,0,0), 1 - t);
+    camera.lookAt(lookInterp);
+
+    if (t < 1) {
+      requestAnimationFrame(updateArc);
+    } else {
+      enableOrbitControls(lookTarget);
+    }
+  }
+
+  updateArc();
+}
+
+// Camera fly function for toggling views
+function cameraFlyTo(targetVec3, duration = 1500) {
+  const startPos = camera.position.clone();
   const startTime = performance.now();
 
   function update() {
     const elapsed = performance.now() - startTime;
-    const t = Math.min(elapsed / duration, 1);
+    let t = elapsed / duration;
+    if (t > 1) t = 1;
 
-    // Interpolate between the start and end positions
-    camera.position.lerpVectors(startPosition, endPosition, t);
-    camera.lookAt(targetPosition);
+    camera.position.lerpVectors(startPos, targetVec3, t);
+    camera.lookAt(0, 0, 0);
 
     if (t < 1) {
       requestAnimationFrame(update);
     } else {
-      enableOrbitControls(targetPosition);
+      enableOrbitControls(new THREE.Vector3(0, 0, 0));
     }
   }
-
   update();
 }
 
-// Enable OrbitControls to allow dragging around the planet
-let controls;
-function enableOrbitControls(targetPosition) {
-  if (controls) {
-    controls.dispose();
-  }
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.copy(targetPosition);
-  controls.update();
-}
+// Simple tooltip for showing planet names on hover
+const tooltip = document.createElement('div');
+tooltip.style.position = 'absolute';
+tooltip.style.padding = '6px 10px';
+tooltip.style.borderRadius = '4px';
+tooltip.style.backgroundColor = 'rgba(0,0,0,0.7)';
+tooltip.style.color = '#fff';
+tooltip.style.pointerEvents = 'none';
+tooltip.style.display = 'none';
+document.body.appendChild(tooltip);
 
-// Animation loop
-function animate() {
+window.addEventListener('mousemove', (event) => {
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const objectsToIntersect = [...planetMeshes, sun];
+  const intersects = raycaster.intersectObjects(objectsToIntersect);
+
+  if (intersects.length > 0) {
+    tooltip.style.display = 'block';
+    tooltip.style.left = event.clientX + 15 + 'px';
+    tooltip.style.top = event.clientY + 15 + 'px';
+    tooltip.innerHTML = intersects[0].object.userData.name || 'Unknown';
+  } else {
+    tooltip.style.display = 'none';
+  }
+});
+
+// Main animation loop
+let lastShootingStarTime = 0;
+function animate(time) {
   requestAnimationFrame(animate);
 
-  // Rotate the Sun
-  sun.rotation.y += 0.005;
+  // Rotate backgrounds slightly
+  starField.rotation.y += 0.00005;
+  galaxySwirl.rotation.y -= 0.00002;
+  nebulaParticles.rotation.y += 0.00002;
 
-  // Update planet positions
-  planetMeshes.forEach((planet) => {
-    planet.userData.angle += planet.userData.orbitSpeed; // Adjust orbit speed
-    planet.position.x = planet.userData.distance * Math.cos(planet.userData.angle);
-    planet.position.z = planet.userData.distance * Math.sin(planet.userData.angle);
+  // Twinkle effect
+  for (let i = 0; i < twinkleCount; i++) {
+    const phase = time * 0.001 + twinklePhases[i];
+    const alpha = (Math.sin(phase) + 1) / 2;
+    const adjustedAlpha = 0.3 + alpha * 0.7;
+    twinkleMaterial.opacity = adjustedAlpha;
+  }
 
-    // Rotate planets on their axis
-    planet.rotation.y += planet.userData.rotationSpeed;
+  // Shooting stars
+  if (time - lastShootingStarTime > 10000 + Math.random() * 5000) {
+    createShootingStar();
+    lastShootingStarTime = time;
+  }
+  shootingStars.forEach((s, index) => {
+    s.mesh.position.add(s.velocity);
+    s.mesh.material.opacity -= 0.001;
+    if (s.mesh.position.y < -1000 || s.mesh.material.opacity <= 0) {
+      scene.remove(s.mesh);
+      shootingStars.splice(index, 1);
+    }
   });
 
-  renderer.render(scene, camera);
-}
+  // Slow rotation of the sun
+  sun.rotation.y += 0.001;
 
+  // Planet orbits and rotations
+  planetMeshes.forEach((m) => {
+    m.rotation.y += m.userData.rotationSpeed;
+    if (!m.userData.isFocused) {
+      m.userData.angle += m.userData.orbitSpeed;
+      m.position.x = m.userData.distance * Math.cos(m.userData.angle);
+      m.position.z = m.userData.distance * Math.sin(m.userData.angle);
+    }
+  });
+
+  controls.update();
+  composer.render();
+}
 animate();
+
+// Resize handling
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
 
