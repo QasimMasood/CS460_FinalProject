@@ -55,7 +55,7 @@ To set up the Solar System Simulation project locally, follow these steps:
 ![Venus Texture](./venus.jpeg)
 
 ## Earth
-![Earth Texture](./earth.jpeg)
+![Earth Texture](./Earth.jpeg)
 
 ## Mars
 ![Mars Texture](./mars.webp)
@@ -64,7 +64,7 @@ To set up the Solar System Simulation project locally, follow these steps:
 ![Jupiter Texture](./jupiter.jpeg)
 
 ## Saturn
-![Saturn Texture](./saturn.jpeg)
+![Saturn Texture](./Saturn.jpeg)
 
 ## Uranus
 ![Uranus Texture](./uranus.webp)
