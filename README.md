@@ -24,7 +24,7 @@ To set up the Solar System Simulation project locally, follow these steps:
    git clone https://github.com/QasimMasood/CS460_FinalProject.git
    cd CS460_FinalProject
 2. **Install dependencies**:
-   Ensure you have Node.js and npm installed on your system. Then, navigate to the project folder and run the following command to install the required dependencies:
+   Ensure that you have Node.js and npm installed on your system. Then, navigate to the project folder and run the following command to install the required dependencies:
    ```bash
    npm install
 3. **Start the development server**:
@@ -88,6 +88,6 @@ Authors:
 - **Qasim Masood**
 - **Alexander Troetsch**
 
-This project was created as part of the CS460 - Computer Graphics course at the University of Massachusetts Boston.
+This project was created as part of the CS460 - Graphics course at the University of Massachusetts Boston.
 
 ---
