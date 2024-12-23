@@ -1,0 +1,23 @@
+{
+  "name": "cs460_finalproject",
+  "version": "1.0.0",
+  "description": "Solar System Project",
+  "main": "app.js",
+  "scripts": {
+    "start": "lite-server .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "gh-pages -d ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "three": "^0.171.0",
+    "tweakpane": "^4.0.5"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.2.0",
+    "lite-server": "^2.6.1"
+  }
+}
