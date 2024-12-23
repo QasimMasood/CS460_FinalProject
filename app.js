@@ -309,25 +309,33 @@ backButton.addEventListener('click', () => {
 // Raycasting to focus on a planet when clicked
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+
 window.addEventListener('click', (e) => {
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(planetMeshes);
-  if (hits.length > 0) {
-    const planet = hits[0].object;
-    planetMeshes.forEach((m) => (m.userData.isFocused = false));
+
+  // Intersect with planetMeshes only
+  const intersects = raycaster.intersectObjects(planetMeshes);
+
+  if (intersects.length > 0) {
+    const planet = intersects[0].object; // First intersected planet
+    planetMeshes.forEach((m) => (m.userData.isFocused = false)); // Reset focus
     planet.userData.isFocused = true;
+
+    // Calculate offset based on planet size
     const planetSize = planet.userData.planetSize || 10;
     const finalOffset = new THREE.Vector3(0, planetSize * 5, planetSize * 8);
+
+    // Transition camera to the clicked planet
     arcCameraTransition(camera.position.clone(), planet.position.clone().add(finalOffset), planet.position);
   }
 });
 
 // Arc-based camera movement
 function arcCameraTransition(startPos, endPos, lookTarget) {
-  const duration = 2500;
-  const arcHeight = 700;
+  const duration = 2500; // Duration of the transition in milliseconds
+  const arcHeight = 700; // Height of the arc
   const startTime = performance.now();
   const midPos = new THREE.Vector3(
     (startPos.x + endPos.x) / 2,
@@ -338,9 +346,10 @@ function arcCameraTransition(startPos, endPos, lookTarget) {
   function updateArc() {
     const now = performance.now();
     const elapsed = now - startTime;
-    let t = elapsed / duration;
-    if (t > 1) t = 1;
+    let t = elapsed / duration; // Normalize time
+    if (t > 1) t = 1; // Clamp t to 1
 
+    // Quadratic Bezier interpolation for smooth camera motion
     const oneMinusT = 1 - t;
     const cameraPos = new THREE.Vector3()
       .addScaledVector(startPos, oneMinusT * oneMinusT)
@@ -349,16 +358,13 @@ function arcCameraTransition(startPos, endPos, lookTarget) {
 
     camera.position.copy(cameraPos);
 
-    const lookInterp = new THREE.Vector3()
-      .copy(lookTarget)
-      .multiplyScalar(t)
-      .addScaledVector(new THREE.Vector3(0, 0, 0), 1 - t);
-    camera.lookAt(lookInterp);
+    // Smoothly adjust the camera's look-at target
+    camera.lookAt(lookTarget);
 
     if (t < 1) {
       requestAnimationFrame(updateArc);
     } else {
-      enableOrbitControls(lookTarget);
+      enableOrbitControls(lookTarget); // Enable orbit controls after transition
     }
   }
 
