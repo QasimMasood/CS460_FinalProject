@@ -43,7 +43,7 @@ mainDirectionalLight.castShadow = true;
 scene.add(mainDirectionalLight);
 
 // The star background using a massive sphere
-const starTexture = new THREE.TextureLoader().load('./stars_background.jpg');
+const starTexture = new THREE.TextureLoader().load('./space.jpeg');
 const starGeometry = new THREE.SphereGeometry(5000, 64, 64);
 const starMaterial = new THREE.MeshBasicMaterial({
   map: starTexture,
@@ -132,12 +132,12 @@ scene.add(sun);
 const planetsData = [
   { name: 'Mercury', texture: './mercury.webp',  size: 10, distance: 250,  baseOrbitSpeed: 0.01, rotationSpeed: 0.01 },
   { name: 'Venus',   texture: './venus.jpeg',    size: 16, distance: 350,  baseOrbitSpeed: 0.008, rotationSpeed: 0.005 },
-  { name: 'Earth',   texture: './earth.jpeg',    size: 18, distance: 450,  baseOrbitSpeed: 0.007, rotationSpeed: 0.02 },
+  { name: 'Earth',   texture: './Earth.jpeg',    size: 18, distance: 450,  baseOrbitSpeed: 0.007, rotationSpeed: 0.02 },
   { name: 'Mars',    texture: './mars.webp',     size: 12, distance: 550,  baseOrbitSpeed: 0.006, rotationSpeed: 0.015 },
   { name: 'Jupiter', texture: './jupiter.jpeg',  size: 40, distance: 750,  baseOrbitSpeed: 0.004, rotationSpeed: 0.03 },
   // Saturn used to have rings referencing saturn_ring.png
   // We removed that ring .png to avoid the 404
-  { name: 'Saturn',  texture: './saturn.jpeg',   size: 35, distance: 950,  baseOrbitSpeed: 0.003, rotationSpeed: 0.02, hasRings: false },
+  { name: 'Saturn',  texture: './Saturn.jpeg',   size: 35, distance: 950,  baseOrbitSpeed: 0.003, rotationSpeed: 0.02, hasRings: false },
   { name: 'Uranus',  texture: './uranus.webp',   size: 24, distance: 1150, baseOrbitSpeed: 0.002, rotationSpeed: 0.01 },
   { name: 'Neptune', texture: './neptune.jpeg',  size: 22, distance: 1350, baseOrbitSpeed: 0.001, rotationSpeed: 0.01 },
 ];
@@ -440,7 +440,7 @@ function animate(time) {
   });
 
   controls.update();
-  composer.render();
+  renderer.render(scene, camera);
 }
 animate();
 
